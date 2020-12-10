@@ -3,18 +3,24 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"io/ioutil"
 	"log"
 	"net/http"
-	"io/ioutil"
-
-	_ "github.com/gorilla/mux"
 )
 
 type Task struct {
 	ID int `json:ID`
 	Name string `json:Name`
 	Content string `json:Content`
+}
+
+type User struct {
+	UserID int `json:UserID`
+	UserName string `json:UserName`
+	UserEmail string `json:UserEmail`
+
 }
 
 type allTasks []Task
@@ -49,12 +55,14 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func getTasks(w http.ResponseWriter, r *http.Request) {
+	(w).Header().Set("Access-Control-Allow-Origin", "*")
+	(w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	(w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tasks)
 }
 
 func createTask(w http.ResponseWriter, r *http.Request) {
-
 	var newTask Task
 	// Recibimos el body desde el Request
 	req, err := ioutil.ReadAll(r.Body)
@@ -76,10 +84,13 @@ func createTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	router := mux.NewRouter().StrictSlash(true)
+	router := mux.NewRouter()
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With"})
+	originsOk := handlers.AllowedOrigins([]string{"*/*"})
+	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 	router.HandleFunc("/", index)
 	router.HandleFunc("/tareas", getTasks)
 	router.HandleFunc("/crearTarea", createTask).Methods("POST")
 
-	log.Fatal(http.ListenAndServe(":8080", router))
+	log.Fatal(http.ListenAndServe(":8080", handlers.CORS(originsOk, headersOk, methodsOk)(router)))
 }
